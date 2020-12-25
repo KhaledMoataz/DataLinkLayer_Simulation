@@ -1,0 +1,17 @@
+# Sender
+string message = "Hello?";
+message = Utils::toBinary(message);
+message = Framing::bitStuffing(message);
+message = Hamming::hamming(message);
+message = Framing::addFlags(message);
+message = Utils::toCharString(message);
+#send(message)
+
+# Receiver
+string message = msg->getName();
+message = Utils::toBinary(message);
+message = Framing::removeFlags(message);
+message = Hamming::correctError(message);
+message = Framing::bitUnstuffing(message);
+message = Utils::toCharString(message);
+cout << message << endl;
