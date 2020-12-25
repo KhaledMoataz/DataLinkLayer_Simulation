@@ -1,17 +1,11 @@
 # Sender
-string message = "Hello?";
-message = Utils::toBinary(message);
-message = Framing::bitStuffing(message);
-message = Hamming::hamming(message);
-message = Framing::addFlags(message);
-message = Utils::toCharString(message);
-#send(message)
+vector<string> frames = Utils::getFramesToSend("Hello how are you?")
+for (string frame:frames) {
+    send(frame)
+}
 
 # Receiver
-string message = msg->getName();
-message = Utils::toBinary(message);
-message = Framing::removeFlags(message);
-message = Hamming::correctError(message);
-message = Framing::bitUnstuffing(message);
-message = Utils::toCharString(message);
-cout << message << endl;
+vector<string> frames;
+while receiving
+    frames.append(frame)
+cout << Utils::decodeFrames(frames) << endl;

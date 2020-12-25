@@ -6,19 +6,26 @@
 #define UNTITLED1_UTILS_H
 
 #include <string>
+#include <vector>
 
 using namespace std;
 
 
 class Utils {
+private:
+    static vector<string> splitString(string message);
 public:
     static string toBinary(const string &message);
 
-    static string toCharString(const string &binaryMessage);
+    static string toCharString(string binaryMessage);
 
     static char xor_char(char a, char b);
 
     static void char_not(char &c);
+
+    static vector<string> getFramesToSend(const string &message);
+
+    static string decodeFrames(vector<string> receivedFrames);
 
 };
 

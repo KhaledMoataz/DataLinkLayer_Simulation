@@ -48,5 +48,6 @@ string Framing::addFlags(const string &binaryMessage) {
 string Framing::removeFlags(const string &binaryMessage) {
     if (binaryMessage.size() < 16)
         return "";
-    return binaryMessage.substr(8, binaryMessage.size() - 16);
+    int last = (int) binaryMessage.rfind("01111110");
+    return binaryMessage.substr(8, last - 8);
 }
