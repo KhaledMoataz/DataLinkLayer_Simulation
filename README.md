@@ -1,14 +1,14 @@
 # wireShark
-Network Simulation project for the DataLink layer with Omnet++.
+a Network Simulation project for the DataLink layer with Omnet++.
 
 ### Architecture
-We use Mesh Architecture with number of nodes N.
+We use the Mesh Architecture with number of nodes N.
 
 ### Framing
 We use Flag Bytes with Bit Stuffing for Framing.
 
 ### Eror Detection & Correction
-We use Hamming for Error Correction in 1 bit.
+We use the Hamming for Error Correction in 1 bit.
 
 ### Protocol
 We use the Go Back N protocol that uses Sliding Window.
