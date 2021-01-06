@@ -30,12 +30,14 @@ class GoBackN : public cSimpleModule
 private:
     int maxWinSize, seqN, seqFirst;
     int frameExp;
+    int peer; // Which node I'm currently communicating with
 
-    std::vector<cMessage*> buffer;
+    std::vector<cMessage*> localBuffer, globalBuffer, receivedBuffer;
     std::queue<cMessage*> timers;
 
-    void sendFrame(cMessage *msg, bool empty=false);
+
     void increment(int & x);
+    void sendFrame(cMessage *msg, bool firstTime=false);
     bool isBusy();
     int calcSize(int x, int y);
 

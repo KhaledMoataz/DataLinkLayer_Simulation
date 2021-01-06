@@ -23,10 +23,7 @@ simple GoBackN
 parameters:
     int numBits = default(2);
     double frameTimeout = default(5);
-    double ackTimeout = default(3);
 gates:
-    input in;
-    input internalIn;	// One for other peer and one for receiving new packets after framing
-    output out;
-    output internalOut;// One for the other peer and one for sending new frames to be decoded
+    input ins[];
+    output outs[];
 }
