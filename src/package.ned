@@ -18,8 +18,11 @@ network Test
         // exponential distribution for the duration of the delay
         double lambda = default(0.5);
     submodules:
-        nodes[2]: GoBackN;
+        nodes[n]: GoBackN;
     connections: 
-       nodes[0].out --> IdealChannel --> nodes[1].in; 
-       nodes[1].out --> IdealChannel --> nodes[0].in; 
+       for i=0..n-1, for j=i+1..n-1
+        {
+            nodes[i].outs++ --> IdealChannel --> nodes[j].ins++;
+            nodes[i].ins++ <-- IdealChannel <-- nodes[j].outs++;
+        }
 }

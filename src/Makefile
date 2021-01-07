@@ -30,7 +30,13 @@ PROJECTRELATIVE_PATH = src
 O = $(PROJECT_OUTPUT_DIR)/$(CONFIGNAME)/$(PROJECTRELATIVE_PATH)
 
 # Object files for local .cc, .msg and .sm files
-OBJS = $O/GoBackN.o
+OBJS = \
+    $O/Framing.o \
+    $O/GoBackN.o \
+    $O/Hamming.o \
+    $O/Node.o \
+    $O/NoisyChannel.o \
+    $O/Utils.o
 
 # Message files
 MSGFILES =
