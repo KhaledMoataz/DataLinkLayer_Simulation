@@ -23,28 +23,49 @@ void GoBackN::initialize()
     seqN = 0;
     seqFirst = 0;
     frameExp = 0;
-    buffer.resize(maxWinSize);
-    scheduleAt(simTime() + par("ackTimeout").doubleValue(), new cMessage("Test", 0));
+    localBuffer.resize(maxWinSize);
 }
 
 void GoBackN::handleMessage(cMessage *msg)
 {
-    if (msg->getKind() == 0) // New Frame from Network Layer
+    if (msg->arrivedOn("ins", 0)) // New message from parent module to send a new line
     {
-        buffer[seqN] = msg;
-        sendFrame(msg);
+        // TODO: Read from file logic
+        // Set peer value
+        // transform to cmessages and push to main globalBuffer
+        while (!globalBuffer.empty())
+        {
+            cMessage *msg = globalBuffer.front();
+            globalBuffer.pop_back();
+            while (isBusy());
+            sendFrame(msg, true);
+        }
     }
-    else if (msg->getKind() == 1) // Frame Arrival from Receiver
+    else if (msg->isSelfMessage()) // Timeout
     {
-        EV << "HERE" << '\n';
+        // Delete all old timers
+        while(!timers.empty())
+        {
+            cMessage* timer = timers.front();
+            cancelAndDelete(timer);
+            timers.pop();
+        }
+
+        // Re-send Frames from seqFrist to N
+        int winSize = calcSize(seqFirst, seqN);
+        for (int i = 0; i<winSize; i++){
+            sendFrame(localBuffer[(seqFirst + i) % maxWinSize]);
+        }
+    }
+    else // Frame Arrival from Receiver
+    {
         int ack = msg->par("ack").longValue();
         int seq = msg->par("seq").longValue();
 
         if (seq == frameExp)
         {
-            send(msg, "internalIn");
+            receivedBuffer.push_back(msg);
             increment(frameExp);
-            scheduleAt(simTime() + par("ackTimeout").doubleValue(), new cMessage("", 4));
         }
 
         // Squeeze the window and cancel all timers in between
@@ -58,38 +79,18 @@ void GoBackN::handleMessage(cMessage *msg)
             winSize--;
         }
     }
-    else if (msg->getKind() == 2) // Timeout
-    {
-        // Delete all old timers
-        while(!timers.empty())
-        {
-            cMessage* timer = timers.front();
-            cancelAndDelete(timer);
-            timers.pop();
-        }
 
-        // Re-send Frames from seqFrist to N
-        int winSize = calcSize(seqFirst, seqN);
-        for (int i = 0; i<winSize; i++){
-            sendFrame(buffer[(seqFirst + i) % maxWinSize]);
-        }
-    }
-    else if (msg->getKind() == 3) // Check for busy
-    {
-        if (isBusy()) send(new cMessage("1", 0), "internalOut");
-        else send(new cMessage("0", 0), "internalOut");
-    }
-    else if (msg->getKind() == 4) // Send Acknowledge
-    {
-        sendFrame(new cMessage());
-    }
 }
 
-void GoBackN::sendFrame(cMessage *msg, bool empty)
+void GoBackN::sendFrame(cMessage *msg, bool firstTime)
 {
+    if (firstTime)
+    {
+        localBuffer[seqN] = msg;
+    }
     // Attaches Acknowledge (Piggybacking) & Frame Sequence to the message
     // Then Sends the new message and sets a timer for it
-    if (!empty && msg->findPar("seq") == -1)
+    if (msg->findPar("seq") == -1)
     {
         msg->addPar("seq");
         msg->par("seq").setLongValue(seqN);
@@ -102,17 +103,13 @@ void GoBackN::sendFrame(cMessage *msg, bool empty)
     msg->par("ack").setLongValue(frameExp);
 
     msg->setKind(1);
-    send(msg, "out");
+    send(msg, "outs", peer);
+    increment(seqN);
 
-    if (!empty)
-    {
-        increment(seqN);
-
-        // Create a timeout event of type 2
-        cMessage* timer = new cMessage("", 2);
-        timers.push(timer);
-        scheduleAt(simTime() + par("frameTimeout").doubleValue(), timer);
-    }
+    // Create a timeout event
+    cMessage* timer = new cMessage("");
+    timers.push(timer);
+    scheduleAt(simTime() + par("frameTimeout").doubleValue(), timer);
 }
 
 int GoBackN::calcSize(int x, int y)

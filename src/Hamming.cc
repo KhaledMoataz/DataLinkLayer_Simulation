@@ -91,7 +91,7 @@ string Hamming::correctError(const string &binaryMessage) {
         nextPowerOfTwo *= 2;
     }
     string correctMessage = binaryMessage;
-    if (errorPosition != 0)
+    if (errorPosition != 0 && errorPosition - 1 < correctMessage.length())
         Utils::char_not(correctMessage[errorPosition - 1]);
     return removeHammingBits(correctMessage);
 }
