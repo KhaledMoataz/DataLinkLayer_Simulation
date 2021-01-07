@@ -1,18 +1,3 @@
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-// 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Lesser General Public License for more details.
-// 
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program.  If not, see http://www.gnu.org/licenses/.
-// 
-
 #ifndef NODE_H_
 #define NODE_H_
 
@@ -20,9 +5,18 @@
 using namespace omnetpp;
 
 class Node: public cSimpleModule {
-protected:
+  protected:
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
+  private:
+    // Noisy channel logic
+    void apply(cMessage*);
+    void normalSend(cMessage*); // send the message unchanged
+    void lose(cMessage*); // ignore the message
+    void replicate(cMessage*);  // send the message twice
+    void delay(cMessage*);  // send the message after a random delay
+    void modify(cMessage*); // toggle a single random bit
+    void makeFrame(cMessage*, bool = false);
 };
 
 #endif /* NODE_H_ */

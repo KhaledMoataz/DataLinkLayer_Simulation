@@ -64,8 +64,6 @@ vector<string> Utils::getFramesToSend(const string &message) {
         word = Utils::toBinary(word);
         word = Framing::bitStuffing(word);
         word = Hamming::hamming(word);
-        word = Framing::addFlags(word);
-        word = Utils::toCharString(word);
         frames.push_back(word);
     }
     return frames;
