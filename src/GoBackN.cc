@@ -50,9 +50,9 @@ void GoBackN::handleMessage(cMessage *msg)
             globalBuffer.push("Hi2");
             globalBuffer.push("Hi3");
             globalBuffer.push("Hi4");
-//            globalBuffer.push("Hi5");
-//            globalBuffer.push("Hi6");
-//            globalBuffer.push("Bye");
+            globalBuffer.push("Hi5");
+            globalBuffer.push("Hi6");
+            globalBuffer.push("Bye");
         }
         else
         {
@@ -89,7 +89,7 @@ void GoBackN::handleMessage(cMessage *msg)
         }
 
         // Re-send Frames from seqFrist to N
-        int winSize = calcSize(seqFirst, seqN);
+        int winSize = calcSize(seqFirst, seqN % (maxWinSize + 1));
         EV << winSize << '\n';
         for (int i = 0; i<winSize; i++){
             sendFrame(localBuffer[(seqFirst + i) % maxWinSize]);
@@ -133,14 +133,14 @@ void GoBackN::sendFrame(std::string frame, bool firstTime)
 
     if (firstTime)
     {
-        localBuffer[seqN] = frame;
+        localBuffer[seqN % maxWinSize] = frame;
     }
     // Attaches Acknowledge (Piggybacking) & Frame Sequence to the message
     // Then Sends the new message and sets a timer for it
     if (msg->findPar("seq") == -1)
     {
         msg->addPar("seq");
-        msg->par("seq").setLongValue(seqN);
+        msg->par("seq").setLongValue(seqN % (maxWinSize + 1));
     }
 
     if (msg->findPar("ack") == -1)
@@ -154,7 +154,7 @@ void GoBackN::sendFrame(std::string frame, bool firstTime)
     send(msg, "outs", peer);
     if (firstTime)
     {
-        increment(seqN);
+        seqN++;
     }
 
     // Create a timeout event
@@ -171,7 +171,7 @@ int GoBackN::calcSize(int x, int y)
 
 bool GoBackN::isBusy()
 {
-    int winSize = calcSize(seqFirst, seqN);
+    int winSize = calcSize(seqFirst, seqN % (maxWinSize + 1));
     return winSize >= maxWinSize;
 }
 
