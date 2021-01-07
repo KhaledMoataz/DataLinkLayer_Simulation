@@ -24,22 +24,59 @@ void GoBackN::initialize()
     seqFirst = 0;
     frameExp = 0;
     localBuffer.resize(maxWinSize);
+    if (getIndex() == 0)
+    {
+        scheduleAt(simTime() + 1.0, new cMessage("start"));
+    }
+    else
+    {
+        scheduleAt(simTime() + 1.5, new cMessage("start"));
+    }
 }
 
 void GoBackN::handleMessage(cMessage *msg)
 {
-    if (msg->arrivedOn("ins", 0)) // New message from parent module to send a new line
+    EV << "NEW MESSAGE" << '\n';
+
+    if (strcmp(msg->getName(), "start") == 0) // New message from parent module to send a new line
     {
         // TODO: Read from file logic
         // Set peer value
         // transform to cmessages and push to main globalBuffer
-        while (!globalBuffer.empty())
+        if (getIndex() == 0)
         {
-            cMessage *msg = globalBuffer.front();
-            globalBuffer.pop_back();
-            while (isBusy());
-            sendFrame(msg, true);
+            peer = 0;
+            globalBuffer.push("Hi");
+            globalBuffer.push("Hi2");
+            globalBuffer.push("Hi3");
+            globalBuffer.push("Hi4");
+//            globalBuffer.push("Hi5");
+//            globalBuffer.push("Hi6");
+//            globalBuffer.push("Bye");
         }
+        else
+        {
+            peer = 0;
+            globalBuffer.push("Hi100");
+        }
+        if (!globalBuffer.empty())
+        {
+            scheduleAt(simTime() + 0.00001, new cMessage("Continue"));
+        }
+        cancelAndDelete(msg);
+    }
+    else if (strcmp(msg->getName(), "Continue") == 0) // Network Layer Ready, Global Buffer Not Empty
+    {
+        std::string s = globalBuffer.front();
+        globalBuffer.pop();
+        EV << "Sending.." << s << '\n';
+        sendFrame(s, true);
+        if (!globalBuffer.empty() && !isBusy())
+        {
+            scheduleAt(simTime() + 0.00001, new cMessage("Continue"));
+            EV << "Scheduled!!" << '\n';
+        }
+        cancelAndDelete(msg);
     }
     else if (msg->isSelfMessage()) // Timeout
     {
@@ -53,23 +90,30 @@ void GoBackN::handleMessage(cMessage *msg)
 
         // Re-send Frames from seqFrist to N
         int winSize = calcSize(seqFirst, seqN);
+        EV << winSize << '\n';
         for (int i = 0; i<winSize; i++){
             sendFrame(localBuffer[(seqFirst + i) % maxWinSize]);
         }
     }
     else // Frame Arrival from Receiver
     {
+        EV << "Received" << '\n';
         int ack = msg->par("ack").longValue();
         int seq = msg->par("seq").longValue();
 
         if (seq == frameExp)
         {
-            receivedBuffer.push_back(msg);
+            receivedBuffer.push(msg->getName());
             increment(frameExp);
         }
 
         // Squeeze the window and cancel all timers in between
         int winSize = calcSize(seqFirst, ack);
+        if (isBusy() && !globalBuffer.empty())
+        {
+            EV << "Was Busy" << '\n';
+            scheduleAt(simTime() + 0.00001, new cMessage("Continue"));
+        }
         while(!timers.empty() && winSize)
         {
             cMessage* timer = timers.front();
@@ -78,15 +122,18 @@ void GoBackN::handleMessage(cMessage *msg)
             increment(seqFirst);
             winSize--;
         }
+        EV << "FREE" << '\n';
+        cancelAndDelete(msg);
     }
-
 }
 
-void GoBackN::sendFrame(cMessage *msg, bool firstTime)
+void GoBackN::sendFrame(std::string frame, bool firstTime)
 {
+    cMessage* msg = new cMessage((char*)(frame.c_str()));
+
     if (firstTime)
     {
-        localBuffer[seqN] = msg;
+        localBuffer[seqN] = frame;
     }
     // Attaches Acknowledge (Piggybacking) & Frame Sequence to the message
     // Then Sends the new message and sets a timer for it
@@ -103,12 +150,17 @@ void GoBackN::sendFrame(cMessage *msg, bool firstTime)
     msg->par("ack").setLongValue(frameExp);
 
     msg->setKind(1);
+
     send(msg, "outs", peer);
-    increment(seqN);
+    if (firstTime)
+    {
+        increment(seqN);
+    }
 
     // Create a timeout event
     cMessage* timer = new cMessage("");
     timers.push(timer);
+    EV << simTime() << '\n';
     scheduleAt(simTime() + par("frameTimeout").doubleValue(), timer);
 }
 
