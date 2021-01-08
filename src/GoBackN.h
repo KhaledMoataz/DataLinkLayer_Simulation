@@ -32,6 +32,8 @@ private:
     int maxWinSize, seqN, seqFirst;
     int frameExp;
     int peer; // Which node I'm currently communicating with
+    int index; // For Indexing Local Buffer
+    cMessage* lastMessage; // Last Continue Message
 
     std::vector<std::string> localBuffer;
     std::queue<cMessage*> timers;
@@ -41,7 +43,8 @@ private:
     void sendFrame(std::string msg, bool firstTime=false);
     bool isBusy();
     int calcSize(int x, int y);
-
+    void printAndClear();
+    void loopAlert();
 protected:
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);

@@ -23,6 +23,8 @@ void GoBackN::initialize()
     seqN = 0;
     seqFirst = 0;
     frameExp = 0;
+    index = 0;
+    lastMessage = nullptr;
     localBuffer.resize(maxWinSize);
     if (getIndex() == 0)
     {
@@ -30,14 +32,12 @@ void GoBackN::initialize()
     }
     else
     {
-        scheduleAt(simTime() + 1.5, new cMessage("start"));
+        scheduleAt(simTime() + 1.0, new cMessage("start"));
     }
 }
 
 void GoBackN::handleMessage(cMessage *msg)
 {
-    EV << "NEW MESSAGE" << '\n';
-
     if (strcmp(msg->getName(), "start") == 0) // New message from parent module to send a new line
     {
         // TODO: Read from file logic
@@ -50,18 +50,30 @@ void GoBackN::handleMessage(cMessage *msg)
             globalBuffer.push("Hi2");
             globalBuffer.push("Hi3");
             globalBuffer.push("Hi4");
-//            globalBuffer.push("Hi5");
-//            globalBuffer.push("Hi6");
-//            globalBuffer.push("Bye");
+            globalBuffer.push("Hi5");
+            globalBuffer.push("Hi6");
+            globalBuffer.push("Bye");
         }
         else
         {
             peer = 0;
             globalBuffer.push("Hi100");
+            globalBuffer.push("Hi200");
+            globalBuffer.push("Hi300");
+            globalBuffer.push("Hi400");
+            globalBuffer.push("Hi500");
+            globalBuffer.push("Hi600");
+            globalBuffer.push("Bye100");
         }
-        if (!globalBuffer.empty())
+        if (globalBuffer.empty())
         {
-            scheduleAt(simTime() + 0.00001, new cMessage("Continue"));
+            cMessage *u = new cMessage("End");
+            send(u, "outs", peer);
+            printAndClear();
+        }
+        else
+        {
+            loopAlert();
         }
         cancelAndDelete(msg);
     }
@@ -73,10 +85,13 @@ void GoBackN::handleMessage(cMessage *msg)
         sendFrame(s, true);
         if (!globalBuffer.empty() && !isBusy())
         {
-            scheduleAt(simTime() + 0.00001, new cMessage("Continue"));
-            EV << "Scheduled!!" << '\n';
+            loopAlert();
         }
         cancelAndDelete(msg);
+    }
+    else if (strcmp(msg->getName(), "End") == 0) // Peer doesn't have any data
+    {
+        printAndClear();
     }
     else if (msg->isSelfMessage()) // Timeout
     {
@@ -90,14 +105,12 @@ void GoBackN::handleMessage(cMessage *msg)
 
         // Re-send Frames from seqFrist to N
         int winSize = calcSize(seqFirst, seqN);
-        EV << winSize << '\n';
         for (int i = 0; i<winSize; i++){
             sendFrame(localBuffer[(seqFirst + i) % maxWinSize]);
         }
     }
     else // Frame Arrival from Receiver
     {
-        EV << "Received" << '\n';
         int ack = msg->par("ack").longValue();
         int seq = msg->par("seq").longValue();
 
@@ -111,8 +124,7 @@ void GoBackN::handleMessage(cMessage *msg)
         int winSize = calcSize(seqFirst, ack);
         if (isBusy() && !globalBuffer.empty())
         {
-            EV << "Was Busy" << '\n';
-            scheduleAt(simTime() + 0.00001, new cMessage("Continue"));
+            loopAlert();
         }
         while(!timers.empty() && winSize)
         {
@@ -122,7 +134,14 @@ void GoBackN::handleMessage(cMessage *msg)
             increment(seqFirst);
             winSize--;
         }
-        EV << "FREE" << '\n';
+
+        if (index && globalBuffer.empty() && seqFirst == seqN) // I Ended my messages, terminate communication
+        {
+            cMessage *u = new cMessage("End");
+            send(u, "outs", peer);
+            lastMessage = nullptr;
+            printAndClear();
+        }
         cancelAndDelete(msg);
     }
 }
@@ -133,7 +152,7 @@ void GoBackN::sendFrame(std::string frame, bool firstTime)
 
     if (firstTime)
     {
-        localBuffer[seqN] = frame;
+        localBuffer[index++ % maxWinSize] = frame;
     }
     // Attaches Acknowledge (Piggybacking) & Frame Sequence to the message
     // Then Sends the new message and sets a timer for it
@@ -160,7 +179,6 @@ void GoBackN::sendFrame(std::string frame, bool firstTime)
     // Create a timeout event
     cMessage* timer = new cMessage("");
     timers.push(timer);
-    EV << simTime() << '\n';
     scheduleAt(simTime() + par("frameTimeout").doubleValue(), timer);
 }
 
@@ -178,4 +196,39 @@ bool GoBackN::isBusy()
 void GoBackN::increment(int & x)
 {
     x = (x + 1) % (maxWinSize + 1);
+}
+
+void GoBackN::printAndClear()
+{
+    // Prints the received frames and clears everything
+    while(!receivedBuffer.empty())
+    {
+        std::string u = receivedBuffer.front();
+        receivedBuffer.pop();
+        EV << u << ' ';
+    }
+    EV << '\n';
+    if (!isBusy())
+    {
+        cancelAndDelete(lastMessage);
+    }
+    seqN = 0;
+    seqFirst = 0;
+    frameExp = 0;
+    index = 0;
+    lastMessage = nullptr;
+    while(!timers.empty())
+    {
+        cMessage* timer = timers.front();
+        cancelAndDelete(timer);
+        timers.pop();
+    }
+}
+
+void GoBackN::loopAlert()
+{
+    // Wake my self again after a random interval to send a new frame
+    double interFrameDelay = ((double) rand() / (RAND_MAX * 100.0));
+    lastMessage = new cMessage("Continue");
+    scheduleAt(simTime() + interFrameDelay, lastMessage);
 }
