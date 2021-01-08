@@ -10,13 +10,13 @@ class Node: public cSimpleModule {
     virtual void handleMessage(cMessage *msg);
   private:
     // Noisy channel logic
-    void apply(cMessage*);
-    void normalSend(cMessage*); // send the message unchanged
-    void lose(cMessage*); // ignore the message
-    void replicate(cMessage*);  // send the message twice
-    void delay(cMessage*);  // send the message after a random delay
-    void modify(cMessage*); // toggle a single random bit
-    void makeFrame(cMessage*, bool = false);
+    void apply(cMessage*, std::string, int);
+    void normalSend(cMessage*, std::string, int); // send the message unchanged
+    void lose(cMessage*, std::string, int); // ignore the message
+    void replicate(cMessage*, std::string, int);  // send the message twice
+    void delay(cMessage*, std::string, int);  // send the message after a random delay
+    void modify(cMessage*, std::string, int); // toggle a single random bit
+    void makeFrame(cMessage*);
 };
 
 #endif /* NODE_H_ */

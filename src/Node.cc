@@ -28,7 +28,8 @@ void Node::handleMessage(cMessage *msg)
             EV << "Sending "<< ss.str() <<" from source " << getIndex() << "\n";
             delete msg;
             msg = new cMessage(ss.str().c_str());
-            send(msg, "out", dest);
+            // send(msg, "out", dest);
+            apply(msg, "out", dest);
 
             double interval = exponential(1 / par("lambda").doubleValue());
             EV << ". Scheduled a new packet after " << interval << "s";
