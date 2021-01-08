@@ -35,7 +35,7 @@ OBJS = \
     $O/GoBackN.o \
     $O/Hamming.o \
     $O/Node.o \
-    $O/NoisyChannel.o \
+    $O/NoisyChannelLogic.o \
     $O/Utils.o
 
 # Message files

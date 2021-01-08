@@ -17,6 +17,8 @@ network Test
         double pDelay = default(0.05);
         // exponential distribution for the duration of the delay
         double lambda = default(0.5);
+        // number of nodes
+        int n = default(2);
     submodules:
         nodes[n]: GoBackN;
     connections: 
