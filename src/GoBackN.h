@@ -20,6 +20,7 @@
 #include <vector>
 #include <queue>
 #include <string>
+#include <fstream>
 
 using namespace omnetpp;
 
@@ -35,6 +36,9 @@ private:
     int index; // For Indexing Local Buffer
     int sessionId; // Id of the current communication session.
     cMessage* lastMessage; // Last Continue Message
+
+    std::ifstream file;
+
 
     std::vector<std::pair<std::string, int>> localBuffer;
     std::queue<cMessage*> timers;

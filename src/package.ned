@@ -21,10 +21,18 @@ network Mesh
         int n = default(2);
     submodules:
         nodes[n]: GoBackN;
-    connections: 
+        parent : Parent;
+    connections:
+        // Connect the nodes in the mesh to each other 
        for i=0..n-1, for j=i+1..n-1
         {
             nodes[i].outs++ --> IdealChannel --> nodes[j].ins++;
             nodes[i].ins++ <-- IdealChannel <-- nodes[j].outs++;
+        }
+        // Connect the nodes in the mesh to the parent
+       for i=0..n-1
+        {
+            nodes[i].outs++ --> IdealChannel --> parent.ins++;
+            nodes[i].ins++ <-- IdealChannel <-- parent.outs++;
         }
 }

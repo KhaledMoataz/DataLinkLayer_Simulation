@@ -28,45 +28,46 @@ void GoBackN::initialize()
     index = INT_MIN;
     lastMessage = nullptr;
     localBuffer.resize(maxWinSize);
-    if (getIndex() == 0)
-    {
-        scheduleAt(simTime() + 1.0, new cMessage("start"));
-    }
-    else
-    {
-        scheduleAt(simTime() + 1.0, new cMessage("start"));
-    }
+    file.open("../data/"+std::to_string(getIndex()), std::ifstream::in);
 }
 
 void GoBackN::handleMessage(cMessage *msg)
 {
-    if (strcmp(msg->getName(), "start") == 0) // New message from parent module to send a new line
+    if (msg->arrivedOn("ins",gateSize("ins")-1)) // New message from parent module to send a new line
     {
         // TODO: Read from file logic
         // Set peer value
         // transform to cmessages and push to main globalBuffer
-        if (getIndex() == 0)
-        {
-            peer = 0;
-            Utils::getFramesToSend("Hi"
-                    " Hi2 Hi3 Hi4 Hi5 Hi6"
-                    " Bye", globalBuffer);
-        }
-        else
-        {
-            peer = 0;
-            Utils::getFramesToSend("Hi100"
-                    " Hi200 Hi300 Hi400 Hi500 Hi600"
-                    " Bye100", globalBuffer);
-        }
-        sessionId = 0;
-        if (globalBuffer.empty())
+
+        std::string str = msg->getName();
+        peer = std::stoi(str.substr(0,str.find(" ")));
+        if(peer > getIndex())
+            peer--;
+
+        sessionId = std::stoi(str.substr(str.find(" ")+1));
+
+
+        // if the file ended, open it again
+        if(file.peek()==EOF)
+            file.open("../data/"+std::to_string(getIndex()), std::ifstream::in);
+
+        // read a line from the file
+        std::string line;
+        std::getline(file,line,'\n');
+
+        EV<<line<<'\n';
+
+        Utils::getFramesToSend(line,globalBuffer);
+
+
+         if (globalBuffer.empty())
         {
             cMessage *u = new cMessage("End");
             u->addPar("session");
             u->par("session").setLongValue(sessionId);
             send(u, "outs", peer);
             printAndClear();
+
         }
         else
         {
@@ -155,6 +156,7 @@ void GoBackN::handleMessage(cMessage *msg)
             u->par("session").setLongValue(sessionId);
             send(u, "outs", peer);
             printAndClear();
+
         }
         cancelAndDelete(msg);
     }
@@ -226,6 +228,10 @@ void GoBackN::printAndClear()
         cancelAndDelete(timer);
         timers.pop();
     }
+
+    // send end session to the parent
+    std::string myIndex = std::to_string(getIndex());
+    send(new cMessage(((char*)(myIndex.c_str()))), "outs", gateSize("ins")-1);
 }
 
 void GoBackN::loopAlert()
