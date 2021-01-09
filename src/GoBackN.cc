@@ -23,7 +23,7 @@ void GoBackN::initialize()
     seqN = 0;
     seqFirst = 0;
     frameExp = 0;
-    index = 0;
+    index = -1;
     lastMessage = nullptr;
     localBuffer.resize(maxWinSize);
     if (getIndex() == 0)
@@ -47,23 +47,23 @@ void GoBackN::handleMessage(cMessage *msg)
         {
             peer = 0;
             globalBuffer.push("Hi");
-            globalBuffer.push("Hi2");
-            globalBuffer.push("Hi3");
-            globalBuffer.push("Hi4");
-            globalBuffer.push("Hi5");
-            globalBuffer.push("Hi6");
-            globalBuffer.push("Bye");
+//            globalBuffer.push("Hi2");
+//            globalBuffer.push("Hi3");
+//            globalBuffer.push("Hi4");
+//            globalBuffer.push("Hi5");
+//            globalBuffer.push("Hi6");
+//            globalBuffer.push("Bye");
         }
         else
         {
             peer = 0;
             globalBuffer.push("Hi100");
-            globalBuffer.push("Hi200");
-            globalBuffer.push("Hi300");
-            globalBuffer.push("Hi400");
-            globalBuffer.push("Hi500");
-            globalBuffer.push("Hi600");
-            globalBuffer.push("Bye100");
+//            globalBuffer.push("Hi200");
+//            globalBuffer.push("Hi300");
+//            globalBuffer.push("Hi400");
+//            globalBuffer.push("Hi500");
+//            globalBuffer.push("Hi600");
+//            globalBuffer.push("Bye100");
         }
         if (globalBuffer.empty())
         {
@@ -73,6 +73,7 @@ void GoBackN::handleMessage(cMessage *msg)
         }
         else
         {
+            index = 0;
             loopAlert();
         }
         cancelAndDelete(msg);
@@ -86,6 +87,10 @@ void GoBackN::handleMessage(cMessage *msg)
         if (!globalBuffer.empty() && !isBusy())
         {
             loopAlert();
+        }
+        else
+        {
+            lastMessage = nullptr;
         }
         cancelAndDelete(msg);
     }
@@ -139,7 +144,6 @@ void GoBackN::handleMessage(cMessage *msg)
         {
             cMessage *u = new cMessage("End");
             send(u, "outs", peer);
-            lastMessage = nullptr;
             printAndClear();
         }
         cancelAndDelete(msg);
@@ -208,14 +212,11 @@ void GoBackN::printAndClear()
         EV << u << ' ';
     }
     EV << '\n';
-    if (!isBusy())
-    {
-        cancelAndDelete(lastMessage);
-    }
+    cancelAndDelete(lastMessage);
     seqN = 0;
     seqFirst = 0;
     frameExp = 0;
-    index = 0;
+    index = -1;
     lastMessage = nullptr;
     while(!timers.empty())
     {
