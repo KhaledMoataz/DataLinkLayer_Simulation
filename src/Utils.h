@@ -7,6 +7,7 @@
 
 #include <string>
 #include <vector>
+#include <queue>
 
 using namespace std;
 
@@ -23,9 +24,9 @@ public:
 
     static void char_not(char &c);
 
-    static vector<string> getFramesToSend(const string &message);
+    static void getFramesToSend(const string &message, queue<string> &globalBuffer);
 
-    static string decodeFrames(vector<string> receivedFrames);
+    static string decodeFrames(queue<string> receivedFrames);
 
 };
 

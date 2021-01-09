@@ -45,6 +45,15 @@ private:
     int calcSize(int x, int y);
     void printAndClear();
     void loopAlert();
+
+    // Noisy Channel Functions
+    void apply(cMessage*, std::string, int);
+    void normalSend(cMessage*, std::string, int); // send the message unchanged
+    void lose(cMessage*, std::string, int); // ignore the message
+    void replicate(cMessage*, std::string, int);  // send the message twice
+    void delay(cMessage*, std::string, int);  // send the message after a random delay
+    void modify(cMessage*, std::string, int); // toggle a single random bit
+    void makeFrame(cMessage*);
 protected:
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);

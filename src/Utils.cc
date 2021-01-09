@@ -57,28 +57,27 @@ vector<string> Utils::splitString(string message) {
     return words;
 }
 
-vector<string> Utils::getFramesToSend(const string &message) {
-    vector<string> frames;
+void Utils::getFramesToSend(const string &message, queue<string> &globalBuffer) {
     vector<string> words = splitString(message);
     for (string word:words) {
         word = Utils::toBinary(word);
         word = Framing::bitStuffing(word);
         word = Hamming::hamming(word);
-        frames.push_back(word);
+        globalBuffer.push(word);
     }
-    return frames;
 }
 
-string Utils::decodeFrames(vector<string> receivedFrames) {
+string Utils::decodeFrames(queue<string> receivedFrames) {
     string message;
-    for (int i = 0; i < receivedFrames.size(); ++i) {
-        string frame = receivedFrames[i];
+    while (!receivedFrames.empty()) {
+        string frame = receivedFrames.front();
         frame = Utils::toBinary(frame);
         frame = Framing::removeFlags(frame);
         frame = Hamming::correctError(frame);
         frame = Framing::bitUnstuffing(frame);
         frame = Utils::toCharString(frame);
-        message += frame + (i != receivedFrames.size() - 1 ? " " : "");
+        receivedFrames.pop();
+        message += frame + (!receivedFrames.empty() ? " " : "");
     }
     return message;
 }

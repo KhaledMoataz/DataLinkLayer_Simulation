@@ -14,6 +14,7 @@
 // 
 
 #include "GoBackN.h"
+#include "Utils.h"
 
 Define_Module(GoBackN);
 
@@ -46,29 +47,32 @@ void GoBackN::handleMessage(cMessage *msg)
         if (getIndex() == 0)
         {
             peer = 0;
-            globalBuffer.push("Hi");
-            globalBuffer.push("Hi2");
-            globalBuffer.push("Hi3");
-            globalBuffer.push("Hi4");
-            globalBuffer.push("Hi5");
-            globalBuffer.push("Hi6");
-            globalBuffer.push("Bye");
+            Utils::getFramesToSend("Hi Hi2 Hi3 Hi4 Hi5 Hi6 Bye", globalBuffer);
+
+//            globalBuffer.push("Hi");
+//            globalBuffer.push("Hi2");
+//            globalBuffer.push("Hi3");
+//            globalBuffer.push("Hi4");
+//            globalBuffer.push("Hi5");
+//            globalBuffer.push("Hi6");
+//            globalBuffer.push("Bye");
         }
         else
         {
             peer = 0;
-            globalBuffer.push("Hi100");
-            globalBuffer.push("Hi200");
-            globalBuffer.push("Hi300");
-            globalBuffer.push("Hi400");
-            globalBuffer.push("Hi500");
-            globalBuffer.push("Hi600");
-            globalBuffer.push("Bye100");
+            Utils::getFramesToSend("Hi100 Hi200 Hi300 Hi400 Hi500 Hi600 Bye100", globalBuffer);
+//            globalBuffer.push("Hi100");
+//            globalBuffer.push("Hi200");
+//            globalBuffer.push("Hi300");
+//            globalBuffer.push("Hi400");
+//            globalBuffer.push("Hi500");
+//            globalBuffer.push("Hi600");
+//            globalBuffer.push("Bye100");
         }
         if (globalBuffer.empty())
         {
             cMessage *u = new cMessage("End");
-            send(u, "outs", peer);
+            apply(u, "outs", peer);
             printAndClear();
         }
         else
@@ -144,7 +148,7 @@ void GoBackN::handleMessage(cMessage *msg)
         if (index && globalBuffer.empty() && seqFirst == seqN) // I Ended my messages, terminate communication
         {
             cMessage *u = new cMessage("End");
-            send(u, "outs", peer);
+            apply(u, "outs", peer);
             printAndClear();
         }
         cancelAndDelete(msg);
@@ -175,7 +179,7 @@ void GoBackN::sendFrame(std::string frame, bool firstTime)
 
     msg->setKind(1);
 
-    send(msg, "outs", peer);
+    apply(msg, "outs", peer);
     if (firstTime)
     {
         increment(seqN);
@@ -206,13 +210,8 @@ void GoBackN::increment(int & x)
 void GoBackN::printAndClear()
 {
     // Prints the received frames and clears everything
-    while(!receivedBuffer.empty())
-    {
-        std::string u = receivedBuffer.front();
-        receivedBuffer.pop();
-        EV << u << ' ';
-    }
-    EV << '\n';
+    std::string conversation = Utils::decodeFrames(receivedBuffer);
+    EV << conversation << '\n';
     cancelAndDelete(lastMessage);
     seqN = 0;
     seqFirst = 0;
