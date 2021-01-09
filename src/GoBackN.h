@@ -19,6 +19,7 @@
 #include <omnetpp.h>
 #include <vector>
 #include <queue>
+#include <string>
 
 using namespace omnetpp;
 
@@ -31,16 +32,19 @@ private:
     int maxWinSize, seqN, seqFirst;
     int frameExp;
     int peer; // Which node I'm currently communicating with
+    int index; // For Indexing Local Buffer
+    cMessage* lastMessage; // Last Continue Message
 
-    std::vector<cMessage*> localBuffer, globalBuffer, receivedBuffer;
+    std::vector<std::string> localBuffer;
     std::queue<cMessage*> timers;
-
+    std::queue<std::string> globalBuffer, receivedBuffer;
 
     void increment(int & x);
-    void sendFrame(cMessage *msg, bool firstTime=false);
+    void sendFrame(std::string msg, bool firstTime=false);
     bool isBusy();
     int calcSize(int x, int y);
-
+    void printAndClear();
+    void loopAlert();
 protected:
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
