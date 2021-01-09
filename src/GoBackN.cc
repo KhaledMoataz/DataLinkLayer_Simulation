@@ -47,23 +47,23 @@ void GoBackN::handleMessage(cMessage *msg)
         {
             peer = 0;
             globalBuffer.push("Hi");
-//            globalBuffer.push("Hi2");
-//            globalBuffer.push("Hi3");
-//            globalBuffer.push("Hi4");
-//            globalBuffer.push("Hi5");
-//            globalBuffer.push("Hi6");
-//            globalBuffer.push("Bye");
+            globalBuffer.push("Hi2");
+            globalBuffer.push("Hi3");
+            globalBuffer.push("Hi4");
+            globalBuffer.push("Hi5");
+            globalBuffer.push("Hi6");
+            globalBuffer.push("Bye");
         }
         else
         {
             peer = 0;
             globalBuffer.push("Hi100");
-//            globalBuffer.push("Hi200");
-//            globalBuffer.push("Hi300");
-//            globalBuffer.push("Hi400");
-//            globalBuffer.push("Hi500");
-//            globalBuffer.push("Hi600");
-//            globalBuffer.push("Bye100");
+            globalBuffer.push("Hi200");
+            globalBuffer.push("Hi300");
+            globalBuffer.push("Hi400");
+            globalBuffer.push("Hi500");
+            globalBuffer.push("Hi600");
+            globalBuffer.push("Bye100");
         }
         if (globalBuffer.empty())
         {
