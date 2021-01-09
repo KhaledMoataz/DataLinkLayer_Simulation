@@ -20,6 +20,7 @@
 #include <vector>
 #include <queue>
 #include <string>
+#include <fstream>
 
 using namespace omnetpp;
 
@@ -33,18 +34,32 @@ private:
     int frameExp;
     int peer; // Which node I'm currently communicating with
     int index; // For Indexing Local Buffer
+    int sessionId; // Id of the current communication session.
     cMessage* lastMessage; // Last Continue Message
 
-    std::vector<std::string> localBuffer;
+    std::ifstream file;
+
+
+    std::vector<std::pair<std::string, int>> localBuffer;
     std::queue<cMessage*> timers;
     std::queue<std::string> globalBuffer, receivedBuffer;
+    std::vector<cMessage*> delayedMessages;
 
     void increment(int & x);
-    void sendFrame(std::string msg, bool firstTime=false);
+    void sendFrame(std::string msg, int seq, bool firstTime=false);
     bool isBusy();
     int calcSize(int x, int y);
     void printAndClear();
     void loopAlert();
+
+    // Noisy Channel Functions
+    void apply(cMessage*, std::string, int);
+    void normalSend(cMessage*, std::string, int); // send the message unchanged
+    void lose(cMessage*, std::string, int); // ignore the message
+    void replicate(cMessage*, std::string, int);  // send the message twice
+    void delay(cMessage*, std::string, int);  // send the message after a random delay
+    void modify(cMessage*, std::string, int); // toggle a single random bit
+    void makeFrame(cMessage*);
 protected:
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);

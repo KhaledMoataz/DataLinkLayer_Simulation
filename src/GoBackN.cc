@@ -14,6 +14,8 @@
 // 
 
 #include "GoBackN.h"
+#include "Utils.h"
+#include "Framing.h"
 
 Define_Module(GoBackN);
 
@@ -23,53 +25,49 @@ void GoBackN::initialize()
     seqN = 0;
     seqFirst = 0;
     frameExp = 0;
-    index = -1;
+    index = INT_MIN;
     lastMessage = nullptr;
     localBuffer.resize(maxWinSize);
-    if (getIndex() == 0)
-    {
-        scheduleAt(simTime() + 1.0, new cMessage("start"));
-    }
-    else
-    {
-        scheduleAt(simTime() + 1.0, new cMessage("start"));
-    }
+    file.open("../data/"+std::to_string(getIndex()), std::ifstream::in);
 }
 
 void GoBackN::handleMessage(cMessage *msg)
 {
-    if (strcmp(msg->getName(), "start") == 0) // New message from parent module to send a new line
+    if (msg->arrivedOn("ins",gateSize("ins")-1)) // New message from parent module to send a new line
     {
         // TODO: Read from file logic
         // Set peer value
         // transform to cmessages and push to main globalBuffer
-        if (getIndex() == 0)
-        {
-            peer = 0;
-            globalBuffer.push("Hi");
-            globalBuffer.push("Hi2");
-            globalBuffer.push("Hi3");
-            globalBuffer.push("Hi4");
-            globalBuffer.push("Hi5");
-            globalBuffer.push("Hi6");
-            globalBuffer.push("Bye");
-        }
-        else
-        {
-            peer = 0;
-            globalBuffer.push("Hi100");
-            globalBuffer.push("Hi200");
-            globalBuffer.push("Hi300");
-            globalBuffer.push("Hi400");
-            globalBuffer.push("Hi500");
-            globalBuffer.push("Hi600");
-            globalBuffer.push("Bye100");
-        }
-        if (globalBuffer.empty())
+
+        std::string str = msg->getName();
+        peer = std::stoi(str.substr(0,str.find(" ")));
+        if(peer > getIndex())
+            peer--;
+
+        sessionId = std::stoi(str.substr(str.find(" ")+1));
+
+
+        // if the file ended, open it again
+        if(file.peek()==EOF)
+            file.open("../data/"+std::to_string(getIndex()), std::ifstream::in);
+
+        // read a line from the file
+        std::string line;
+        std::getline(file,line,'\n');
+
+        EV<<line<<'\n';
+
+        Utils::getFramesToSend(line,globalBuffer);
+
+
+         if (globalBuffer.empty())
         {
             cMessage *u = new cMessage("End");
+            u->addPar("session");
+            u->par("session").setLongValue(sessionId);
             send(u, "outs", peer);
             printAndClear();
+
         }
         else
         {
@@ -82,8 +80,8 @@ void GoBackN::handleMessage(cMessage *msg)
     {
         std::string s = globalBuffer.front();
         globalBuffer.pop();
-        EV << "Sending.." << s << '\n';
-        sendFrame(s, true);
+        EV << "Sending: ";
+        sendFrame(s, seqN, true);
         if (!globalBuffer.empty() && !isBusy())
         {
             loopAlert();
@@ -93,10 +91,6 @@ void GoBackN::handleMessage(cMessage *msg)
             lastMessage = nullptr;
         }
         cancelAndDelete(msg);
-    }
-    else if (strcmp(msg->getName(), "End") == 0) // Peer doesn't have any data
-    {
-        printAndClear();
     }
     else if (msg->isSelfMessage()) // Timeout
     {
@@ -110,9 +104,16 @@ void GoBackN::handleMessage(cMessage *msg)
 
         // Re-send Frames from seqFrist to N
         int winSize = calcSize(seqFirst, seqN);
+        int timeoutIndex = (index - winSize) % maxWinSize;
         for (int i = 0; i<winSize; i++){
-            sendFrame(localBuffer[(seqFirst + i) % maxWinSize]);
+            sendFrame(localBuffer[(timeoutIndex + i) % maxWinSize].first,
+                    localBuffer[(timeoutIndex + i) % maxWinSize].second);
         }
+    }
+    else if (msg->par("session").longValue() != sessionId);
+    else if (strcmp(msg->getName(), "End") == 0) // Peer doesn't have any data
+    {
+        printAndClear();
     }
     else // Frame Arrival from Receiver
     {
@@ -121,6 +122,11 @@ void GoBackN::handleMessage(cMessage *msg)
 
         if (seq == frameExp)
         {
+
+            std::string s = Utils::decodeFrame(msg->getName());
+            EV << "Received Raw: " << std::string(msg->getName()).size() << ", " << msg->getName() << '\n';
+            EV << "Received Bits: " << Utils::toBinary(msg->getName()) << '\n';
+            EV << "Received Message: " << s << '\n';
             receivedBuffer.push(msg->getName());
             increment(frameExp);
         }
@@ -128,7 +134,9 @@ void GoBackN::handleMessage(cMessage *msg)
         // Squeeze the window and cancel all timers in between
         int winSize = calcSize(seqFirst, ack);
         winSize = (winSize > calcSize(seqFirst, seqN)) ? 0 : winSize;
-        if (isBusy() && !globalBuffer.empty())
+        EV << "Local Buffer Size: " << calcSize(seqFirst, seqN) << '\n';
+        EV << "Ack Size: " << calcSize(seqFirst, ack) << '\n';
+        if (winSize && isBusy() && !globalBuffer.empty())
         {
             loopAlert();
         }
@@ -141,46 +149,44 @@ void GoBackN::handleMessage(cMessage *msg)
             winSize--;
         }
 
-        if (index && globalBuffer.empty() && seqFirst == seqN) // I Ended my messages, terminate communication
+        if (index > 0 && globalBuffer.empty() && seqFirst == seqN) // I Ended my messages, terminate communication
         {
             cMessage *u = new cMessage("End");
+            u->addPar("session");
+            u->par("session").setLongValue(sessionId);
             send(u, "outs", peer);
             printAndClear();
+
         }
         cancelAndDelete(msg);
     }
 }
 
-void GoBackN::sendFrame(std::string frame, bool firstTime)
+void GoBackN::sendFrame(std::string frame, int seq, bool firstTime)
 {
-    cMessage* msg = new cMessage((char*)(frame.c_str()));
+    std::string decodedFrame = Utils::decodeFrame(Framing::addFlags(frame));
+    EV << decodedFrame << '\n';
 
+    cMessage* msg = new cMessage((char*)(frame.c_str()));
+    EV << "Sending Raw: " << msg->getName() << '\n';
     if (firstTime)
     {
-        localBuffer[index++ % maxWinSize] = frame;
+        localBuffer[index++ % maxWinSize] = {frame, seq};
+        increment(seqN);
     }
     // Attaches Acknowledge (Piggybacking) & Frame Sequence to the message
     // Then Sends the new message and sets a timer for it
-    if (msg->findPar("seq") == -1)
-    {
-        msg->addPar("seq");
-        msg->par("seq").setLongValue(seqN);
-    }
+    msg->addPar("seq");
+    msg->par("seq").setLongValue(seq);
 
-    if (msg->findPar("ack") == -1)
-    {
-        msg->addPar("ack");
-    }
+    msg->addPar("ack");
     msg->par("ack").setLongValue(frameExp);
 
-    msg->setKind(1);
-
-    send(msg, "outs", peer);
-    if (firstTime)
-    {
-        increment(seqN);
-    }
-
+    msg->addPar("session");
+    msg->par("session").setLongValue(sessionId);
+    EV << seq << '\n';
+    apply(msg, "outs", peer);
+    EV << isBusy() << '\n';
     // Create a timeout event
     cMessage* timer = new cMessage("");
     timers.push(timer);
@@ -206,18 +212,15 @@ void GoBackN::increment(int & x)
 void GoBackN::printAndClear()
 {
     // Prints the received frames and clears everything
-    while(!receivedBuffer.empty())
-    {
-        std::string u = receivedBuffer.front();
-        receivedBuffer.pop();
-        EV << u << ' ';
-    }
-    EV << '\n';
+    std::string conversation = Utils::decodeFrames(receivedBuffer);
+    EV << conversation << '\n';
     cancelAndDelete(lastMessage);
+
     seqN = 0;
     seqFirst = 0;
     frameExp = 0;
-    index = -1;
+    index = INT_MIN;
+    sessionId = -1;
     lastMessage = nullptr;
     while(!timers.empty())
     {
@@ -225,6 +228,10 @@ void GoBackN::printAndClear()
         cancelAndDelete(timer);
         timers.pop();
     }
+
+    // send end session to the parent
+    std::string myIndex = std::to_string(getIndex());
+    send(new cMessage(((char*)(myIndex.c_str()))), "outs", gateSize("ins")-1);
 }
 
 void GoBackN::loopAlert()

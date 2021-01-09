@@ -1,9 +1,8 @@
-#include "Node.h"
+#include "GoBackN.h"
 #include "Utils.h"
 #include "Framing.h"
-#include "Hamming.h"
 
-void Node::apply(cMessage *msg, std::string gate, int port)
+void GoBackN::apply(cMessage *msg, std::string gate, int port)
 {
     // Noisy channel logic
     std::string data = msg->getName();
@@ -35,7 +34,7 @@ void Node::apply(cMessage *msg, std::string gate, int port)
     normalSend(msg, gate, port);
 }
 
-void Node::normalSend(cMessage* msg, std::string gate, int port)
+void GoBackN::normalSend(cMessage* msg, std::string gate, int port)
 {
     makeFrame(msg);
 
@@ -44,14 +43,14 @@ void Node::normalSend(cMessage* msg, std::string gate, int port)
     EV << "Message is untouched" << endl;
 }
 
-void Node::lose(cMessage* msg, std::string gate, int port)
+void GoBackN::lose(cMessage* msg, std::string gate, int port)
 {
     delete msg;
 
     EV << "Message lost" << endl;
 }
 
-void Node::replicate(cMessage* msg, std::string gate, int port)
+void GoBackN::replicate(cMessage* msg, std::string gate, int port)
 {
     makeFrame(msg);
 
@@ -61,17 +60,19 @@ void Node::replicate(cMessage* msg, std::string gate, int port)
     EV << "Message replicated" << endl;
 }
 
-void Node::delay(cMessage* msg, std::string gate, int port)
+void GoBackN::delay(cMessage* msg, std::string gate, int port)
 {
     makeFrame(msg);
 
     double delay = exponential(1/getAncestorPar("lambda").doubleValue());
     sendDelayed(msg, delay, gate.c_str(), port);
 
+    delayedMessages.push_back(msg);
+
     EV << "Message delayed for " << delay << " time units" << endl;
 }
 
-void Node::modify(cMessage* msg, std::string gate, int port)
+void GoBackN::modify(cMessage* msg, std::string gate, int port)
 {
     std::string frame = msg->getName();
     int index = intuniformexcl(0, frame.size());
@@ -85,12 +86,11 @@ void Node::modify(cMessage* msg, std::string gate, int port)
     EV << "Message modified at " << index << " to " << frame << endl;
 }
 
-void Node::makeFrame(cMessage* msg)
+void GoBackN::makeFrame(cMessage* msg)
 {
     std::string frame = msg->getName();
     frame = Framing::addFlags(frame);
-    frame = Utils::toCharString(frame);
-
+//    frame = Utils::toCharString(frame);
     msg->setName((char*)(frame.c_str()));
 }
 

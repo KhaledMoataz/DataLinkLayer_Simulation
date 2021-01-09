@@ -15,12 +15,14 @@
 
 package wireshark;
 
-simple Node
+//
+// TODO auto-generated module
+//
+simple Parent
 {
     parameters:
-        double lambda = default(1.5);
-        
-    gates:
-       input in[];
-       output out[];
+        double sleepTime = default(30);
+gates:
+    input ins[];
+    output outs[];
 }
