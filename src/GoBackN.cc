@@ -127,6 +127,7 @@ void GoBackN::handleMessage(cMessage *msg)
 
         // Squeeze the window and cancel all timers in between
         int winSize = calcSize(seqFirst, ack);
+        winSize = (winSize > calcSize(seqFirst, seqN)) ? 0 : winSize;
         if (isBusy() && !globalBuffer.empty())
         {
             loopAlert();
