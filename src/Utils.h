@@ -28,6 +28,7 @@ public:
 
     static string decodeFrames(queue<string> receivedFrames);
 
+    static string decodeFrame(const string &frame);
 };
 
 

@@ -33,14 +33,16 @@ private:
     int frameExp;
     int peer; // Which node I'm currently communicating with
     int index; // For Indexing Local Buffer
+    int sessionId; // Id of the current communication session.
     cMessage* lastMessage; // Last Continue Message
 
-    std::vector<std::string> localBuffer;
+    std::vector<std::pair<std::string, int>> localBuffer;
     std::queue<cMessage*> timers;
     std::queue<std::string> globalBuffer, receivedBuffer;
+    std::vector<cMessage*> delayedMessages;
 
     void increment(int & x);
-    void sendFrame(std::string msg, bool firstTime=false);
+    void sendFrame(std::string msg, int seq, bool firstTime=false);
     bool isBusy();
     int calcSize(int x, int y);
     void printAndClear();

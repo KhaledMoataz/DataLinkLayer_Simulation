@@ -1,5 +1,0 @@
-1- Merging the Noise with the Mesh will be in the Node.cc and package.ned
-
-2- Merging the GoBackN with the Mesh will be in all Node files and package.ned
-
-3- Merging Framing & error detection with the Mesh will be in Node.cc and Node.h

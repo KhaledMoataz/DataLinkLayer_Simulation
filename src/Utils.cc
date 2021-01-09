@@ -70,14 +70,19 @@ void Utils::getFramesToSend(const string &message, queue<string> &globalBuffer) 
 string Utils::decodeFrames(queue<string> receivedFrames) {
     string message;
     while (!receivedFrames.empty()) {
-        string frame = receivedFrames.front();
-        frame = Utils::toBinary(frame);
-        frame = Framing::removeFlags(frame);
-        frame = Hamming::correctError(frame);
-        frame = Framing::bitUnstuffing(frame);
-        frame = Utils::toCharString(frame);
+        string frame = decodeFrame(receivedFrames.front());
         receivedFrames.pop();
         message += frame + (!receivedFrames.empty() ? " " : "");
     }
     return message;
+}
+
+string Utils::decodeFrame(const string &receivedFrame) {
+    string frame = receivedFrame;
+//    frame = Utils::toBinary(frame);
+    frame = Framing::removeFlags(frame);
+    frame = Hamming::correctError(frame);
+    frame = Framing::bitUnstuffing(frame);
+    frame = Utils::toCharString(frame);
+    return frame;
 }

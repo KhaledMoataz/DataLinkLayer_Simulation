@@ -67,6 +67,8 @@ void GoBackN::delay(cMessage* msg, std::string gate, int port)
     double delay = exponential(1/getAncestorPar("lambda").doubleValue());
     sendDelayed(msg, delay, gate.c_str(), port);
 
+    delayedMessages.push_back(msg);
+
     EV << "Message delayed for " << delay << " time units" << endl;
 }
 
@@ -88,8 +90,7 @@ void GoBackN::makeFrame(cMessage* msg)
 {
     std::string frame = msg->getName();
     frame = Framing::addFlags(frame);
-    frame = Utils::toCharString(frame);
-
+//    frame = Utils::toCharString(frame);
     msg->setName((char*)(frame.c_str()));
 }
 

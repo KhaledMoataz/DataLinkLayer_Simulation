@@ -15,6 +15,7 @@
 
 #include "GoBackN.h"
 #include "Utils.h"
+#include "Framing.h"
 
 Define_Module(GoBackN);
 
@@ -24,7 +25,7 @@ void GoBackN::initialize()
     seqN = 0;
     seqFirst = 0;
     frameExp = 0;
-    index = -1;
+    index = INT_MIN;
     lastMessage = nullptr;
     localBuffer.resize(maxWinSize);
     if (getIndex() == 0)
@@ -47,32 +48,24 @@ void GoBackN::handleMessage(cMessage *msg)
         if (getIndex() == 0)
         {
             peer = 0;
-            Utils::getFramesToSend("Hi Hi2 Hi3 Hi4 Hi5 Hi6 Bye", globalBuffer);
-
-//            globalBuffer.push("Hi");
-//            globalBuffer.push("Hi2");
-//            globalBuffer.push("Hi3");
-//            globalBuffer.push("Hi4");
-//            globalBuffer.push("Hi5");
-//            globalBuffer.push("Hi6");
-//            globalBuffer.push("Bye");
+            Utils::getFramesToSend("Hi"
+                    " Hi2 Hi3 Hi4 Hi5 Hi6"
+                    " Bye", globalBuffer);
         }
         else
         {
             peer = 0;
-            Utils::getFramesToSend("Hi100 Hi200 Hi300 Hi400 Hi500 Hi600 Bye100", globalBuffer);
-//            globalBuffer.push("Hi100");
-//            globalBuffer.push("Hi200");
-//            globalBuffer.push("Hi300");
-//            globalBuffer.push("Hi400");
-//            globalBuffer.push("Hi500");
-//            globalBuffer.push("Hi600");
-//            globalBuffer.push("Bye100");
+            Utils::getFramesToSend("Hi100"
+                    " Hi200 Hi300 Hi400 Hi500 Hi600"
+                    " Bye100", globalBuffer);
         }
+        sessionId = 0;
         if (globalBuffer.empty())
         {
             cMessage *u = new cMessage("End");
-            apply(u, "outs", peer);
+            u->addPar("session");
+            u->par("session").setLongValue(sessionId);
+            send(u, "outs", peer);
             printAndClear();
         }
         else
@@ -86,8 +79,8 @@ void GoBackN::handleMessage(cMessage *msg)
     {
         std::string s = globalBuffer.front();
         globalBuffer.pop();
-        EV << "Sending.." << s << '\n';
-        sendFrame(s, true);
+        EV << "Sending: ";
+        sendFrame(s, seqN, true);
         if (!globalBuffer.empty() && !isBusy())
         {
             loopAlert();
@@ -97,10 +90,6 @@ void GoBackN::handleMessage(cMessage *msg)
             lastMessage = nullptr;
         }
         cancelAndDelete(msg);
-    }
-    else if (strcmp(msg->getName(), "End") == 0) // Peer doesn't have any data
-    {
-        printAndClear();
     }
     else if (msg->isSelfMessage()) // Timeout
     {
@@ -114,9 +103,16 @@ void GoBackN::handleMessage(cMessage *msg)
 
         // Re-send Frames from seqFrist to N
         int winSize = calcSize(seqFirst, seqN);
+        int timeoutIndex = (index - winSize) % maxWinSize;
         for (int i = 0; i<winSize; i++){
-            sendFrame(localBuffer[(seqFirst + i) % maxWinSize]);
+            sendFrame(localBuffer[(timeoutIndex + i) % maxWinSize].first,
+                    localBuffer[(timeoutIndex + i) % maxWinSize].second);
         }
+    }
+    else if (msg->par("session").longValue() != sessionId);
+    else if (strcmp(msg->getName(), "End") == 0) // Peer doesn't have any data
+    {
+        printAndClear();
     }
     else // Frame Arrival from Receiver
     {
@@ -125,6 +121,11 @@ void GoBackN::handleMessage(cMessage *msg)
 
         if (seq == frameExp)
         {
+
+            std::string s = Utils::decodeFrame(msg->getName());
+            EV << "Received Raw: " << std::string(msg->getName()).size() << ", " << msg->getName() << '\n';
+            EV << "Received Bits: " << Utils::toBinary(msg->getName()) << '\n';
+            EV << "Received Message: " << s << '\n';
             receivedBuffer.push(msg->getName());
             increment(frameExp);
         }
@@ -132,7 +133,9 @@ void GoBackN::handleMessage(cMessage *msg)
         // Squeeze the window and cancel all timers in between
         int winSize = calcSize(seqFirst, ack);
         winSize = (winSize > calcSize(seqFirst, seqN)) ? 0 : winSize;
-        if (isBusy() && !globalBuffer.empty())
+        EV << "Local Buffer Size: " << calcSize(seqFirst, seqN) << '\n';
+        EV << "Ack Size: " << calcSize(seqFirst, ack) << '\n';
+        if (winSize && isBusy() && !globalBuffer.empty())
         {
             loopAlert();
         }
@@ -145,46 +148,43 @@ void GoBackN::handleMessage(cMessage *msg)
             winSize--;
         }
 
-        if (index && globalBuffer.empty() && seqFirst == seqN) // I Ended my messages, terminate communication
+        if (index > 0 && globalBuffer.empty() && seqFirst == seqN) // I Ended my messages, terminate communication
         {
             cMessage *u = new cMessage("End");
-            apply(u, "outs", peer);
+            u->addPar("session");
+            u->par("session").setLongValue(sessionId);
+            send(u, "outs", peer);
             printAndClear();
         }
         cancelAndDelete(msg);
     }
 }
 
-void GoBackN::sendFrame(std::string frame, bool firstTime)
+void GoBackN::sendFrame(std::string frame, int seq, bool firstTime)
 {
-    cMessage* msg = new cMessage((char*)(frame.c_str()));
+    std::string decodedFrame = Utils::decodeFrame(Framing::addFlags(frame));
+    EV << decodedFrame << '\n';
 
+    cMessage* msg = new cMessage((char*)(frame.c_str()));
+    EV << "Sending Raw: " << msg->getName() << '\n';
     if (firstTime)
     {
-        localBuffer[index++ % maxWinSize] = frame;
+        localBuffer[index++ % maxWinSize] = {frame, seq};
+        increment(seqN);
     }
     // Attaches Acknowledge (Piggybacking) & Frame Sequence to the message
     // Then Sends the new message and sets a timer for it
-    if (msg->findPar("seq") == -1)
-    {
-        msg->addPar("seq");
-        msg->par("seq").setLongValue(seqN);
-    }
+    msg->addPar("seq");
+    msg->par("seq").setLongValue(seq);
 
-    if (msg->findPar("ack") == -1)
-    {
-        msg->addPar("ack");
-    }
+    msg->addPar("ack");
     msg->par("ack").setLongValue(frameExp);
 
-    msg->setKind(1);
-
+    msg->addPar("session");
+    msg->par("session").setLongValue(sessionId);
+    EV << seq << '\n';
     apply(msg, "outs", peer);
-    if (firstTime)
-    {
-        increment(seqN);
-    }
-
+    EV << isBusy() << '\n';
     // Create a timeout event
     cMessage* timer = new cMessage("");
     timers.push(timer);
@@ -213,10 +213,12 @@ void GoBackN::printAndClear()
     std::string conversation = Utils::decodeFrames(receivedBuffer);
     EV << conversation << '\n';
     cancelAndDelete(lastMessage);
+
     seqN = 0;
     seqFirst = 0;
     frameExp = 0;
-    index = -1;
+    index = INT_MIN;
+    sessionId = -1;
     lastMessage = nullptr;
     while(!timers.empty())
     {

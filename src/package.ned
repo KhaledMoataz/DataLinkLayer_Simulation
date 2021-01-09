@@ -4,7 +4,7 @@ package wireshark;
 
 import ned.IdealChannel;
 
-network Test
+network Mesh
 {
     parameters:        
 		// geometric distribution for the bit to be modified (no modification if out of bounds)
