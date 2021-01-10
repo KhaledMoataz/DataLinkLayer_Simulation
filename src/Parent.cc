@@ -83,8 +83,9 @@ void Parent::handleMessage(cMessage *msg)
                 sessionId = (sessionId + 1) % 256;
             }
         }
-        else
+        else {
 //            EV <<"The Parent didn't choose any pairs"<<'\n'<<'\n';
+        }
 
         if (simTime() >= 180 && simTime() < 200)
         {
@@ -109,18 +110,19 @@ void Parent::handleMessage(cMessage *msg)
         message /= 100;
         available.push_back(idx);
 
-        int uD = msg->par("usefulData");
-        int tD = msg->par("totalData");
+        int uD = msg->par("usefulData").longValue();
+        int tD = msg->par("totalData").longValue();
+        int sessionID = msg->par("sessionID").longValue();
 
-        int sessionID = msg->par("sessionID");
 
-        if (finishedSessions[sessionsID] == -1)
+        if (finishedSessions[sessionID] == -1)
         {
-            finishedSessions[sessionsID] = idx;
+            finishedSessions[sessionID] = idx;
         }
         else
         {
-            EV << "Session between nodes: <" << idx << ", " << finishedSessions[sessionsID] << "> has ended.\n";
+            EV << "Session between nodes: <" << idx << ", " << finishedSessions[sessionID] << "> has ended.\n";
+            finishedSessions[sessionID] = -1;
         }
 
         numGeneratedFrames += nGF;

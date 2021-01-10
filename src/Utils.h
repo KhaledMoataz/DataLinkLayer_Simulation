@@ -27,7 +27,7 @@ public:
 
     static void getFramesToSend(const string &message, queue<string> &globalBuffer);
 
-    static string decodeFrames(queue<string> receivedFrames);
+    static string decodeFrames(queue<string> receivedFrames, bool &corrected);
 
     static string decodeFrame(const string &frame, bool &corrected);
 };

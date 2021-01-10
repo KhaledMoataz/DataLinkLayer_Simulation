@@ -68,10 +68,10 @@ void Utils::getFramesToSend(const string &message, queue<string> &globalBuffer) 
     }
 }
 
-string Utils::decodeFrames(queue<string> receivedFrames) {
+string Utils::decodeFrames(queue<string> receivedFrames, bool &corrected) {
     string message;
     while (!receivedFrames.empty()) {
-        string frame = decodeFrame(receivedFrames.front());
+        string frame = decodeFrame(receivedFrames.front(), corrected);
         receivedFrames.pop();
         message += frame + (!receivedFrames.empty() ? " " : "");
     }

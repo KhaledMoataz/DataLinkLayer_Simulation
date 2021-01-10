@@ -119,8 +119,9 @@ void GoBackN::handleMessage(cMessage *msg)
                     localBuffer[(timeoutIndex + i) % maxWinSize].second);
 
             // retransmission logs
+            bool corrected = false;
             EV << "Retransmitting message with payload: " <<
-                    Utils::decodeFrame(localBuffer[(timeoutIndex + i) % maxWinSize].first) << endl;
+                    Utils::decodeFrame(localBuffer[(timeoutIndex + i) % maxWinSize].first, corrected) << endl;
         }
     }
     else if (msg->par("session").longValue() != sessionId);
@@ -186,7 +187,7 @@ void GoBackN::handleMessage(cMessage *msg)
 
 void GoBackN::sendFrame(std::string frame, int seq, bool firstTime)
 {
-    std::string decodedFrame = Utils::decodeFrame(frame);
+//    std::string decodedFrame = Utils::decodeFrame(frame);
 //    EV << "Sending: " << decodedFrame << '\n';
 
     cMessage* msg = new cMessage((char*)(frame.c_str()));
@@ -244,8 +245,9 @@ void GoBackN::increment(int & x)
 void GoBackN::printAndClear()
 {
     // Prints the received frames and clears everything
-    std::string conversation = Utils::decodeFrames(receivedBuffer);
-//    EV << "Received Messages: "<< conversation << '\n';
+    bool corrected = false;
+    std::string conversation = Utils::decodeFrames(receivedBuffer, corrected);
+    EV << "Received Messages: "<< conversation << '\n';
 
     cancelAndDelete(lastMessage);
 
@@ -253,7 +255,6 @@ void GoBackN::printAndClear()
     seqFirst = 0;
     frameExp = 0;
     index = INT_MIN;
-    sessionId = -1;
     lastMessage = nullptr;
 
     while(!timers.empty())
@@ -286,6 +287,7 @@ void GoBackN::printAndClear()
     numRetransmittedFrames = 0;
     usefulData = 0;
     totalData = 0;
+    sessionId = -1;
 }
 
 void GoBackN::loopAlert()

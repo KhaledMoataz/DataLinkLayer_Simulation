@@ -71,6 +71,7 @@ void GoBackN::modify(cMessage* msg, std::string gate, int port)
 {
     std::string frame = msg->getName();
     int index = intuniformexcl(8, frame.size()-8);
+    std::string before = frame;
     Utils::char_not(frame[index]);
     msg->setName((char*)(frame.c_str()));
 
