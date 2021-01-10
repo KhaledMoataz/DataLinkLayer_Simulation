@@ -34,6 +34,7 @@ public:
     int numRetransmittedFrames;
     int usefulData;
     int totalData;
+    int finishedSessions[256];
 
 protected:
     virtual void initialize();

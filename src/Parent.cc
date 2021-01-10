@@ -31,20 +31,24 @@ void Parent::initialize()
     usefulData = 0;
     totalData = 0;
     scheduleAt(simTime() + 1.0, new cMessage("self"));
+    for (auto &id : finishedSessions)
+    {
+        id = -1;
+    }
 }
 
 void Parent::handleMessage(cMessage *msg)
 {
     if (msg->isSelfMessage())      // Select pairs for connections
     {
-        EV <<"in sessionId = "<<sessionId<<'\n';
+//        EV <<"in sessionId = "<<sessionId<<'\n';
 
         // 0 or 1 (50% probability for choosing pairs or not)
         if(intuniform(0, 1))
         {
             // if 1 choose random number between (1, available_size/2)
             int num = intuniform(0, available.size()/2);
-            EV <<"The Parent chooses "<<num<<" pairs"<<'\n'<<'\n';
+//            EV <<"The Parent chooses "<<num<<" pairs"<<'\n'<<'\n';
 
             int randIndex1,randIndex2,index1Value,index2Value;
             // for each pair choose two random numbers between (0, available_size)
@@ -66,21 +70,25 @@ void Parent::handleMessage(cMessage *msg)
                 // send message to sender
                 std::string str =  std::to_string(index2Value)+" "+std::to_string(sessionId);
                 send(new cMessage(((char*)(str.c_str()))),"outs",index1Value);
-                EV <<index1Value<<", ";
+//                EV <<index1Value<<", ";
 
                 // send message to receiver
                 str = std::to_string(index1Value)+" "+std::to_string(sessionId);
                 send(new cMessage(((char*)(str.c_str()))),"outs",index2Value);
-                EV <<index2Value<<'\n';
+//                EV <<index2Value<<'\n';
 
-                sessionId++;
+                // start session logs
+                EV << "New session started between nodes: <" << index1Value << ", " << index2Value << ">\n";
+
+                sessionId = (sessionId + 1) % 256;
             }
         }
         else
-            EV <<"The Parent didn't choose any pairs"<<'\n'<<'\n';
+//            EV <<"The Parent didn't choose any pairs"<<'\n'<<'\n';
 
         if (simTime() >= 180 && simTime() < 200)
         {
+            EV << "==============Statistics================\n";
             EV << "Num Generated Frames: " << numGeneratedFrames << '\n';
             EV << "Num Dropped Frames: " << numDroppedFrames << '\n';
             EV << "Num Retransmitted Frames: " << numRetransmittedFrames << '\n';
@@ -104,7 +112,16 @@ void Parent::handleMessage(cMessage *msg)
         int uD = msg->par("usefulData");
         int tD = msg->par("totalData");
 
-        EV << "The Parent received end session from Node " << idx << '\n';
+        int sessionID = msg->par("sessionID");
+
+        if (finishedSessions[sessionsID] == -1)
+        {
+            finishedSessions[sessionsID] = idx;
+        }
+        else
+        {
+            EV << "Session between nodes: <" << idx << ", " << finishedSessions[sessionsID] << "> has ended.\n";
+        }
 
         numGeneratedFrames += nGF;
         numDroppedFrames += nDF;

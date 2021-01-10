@@ -60,7 +60,7 @@ void GoBackN::handleMessage(cMessage *msg)
         std::string line;
         std::getline(file,line,'\n');
 
-        EV<<line<<'\n';
+//        EV<<line<<'\n';
 
         Utils::getFramesToSend(line,globalBuffer);
 
@@ -109,10 +109,18 @@ void GoBackN::handleMessage(cMessage *msg)
 
         // Re-send Frames from seqFrist to N
         int winSize = calcSize(seqFirst, seqN);
-        int timeoutIndex = (index - winSize) % maxWinSize;
+        int timeoutIndex = (index - winSize);
+        // timeout logs
+        EV << "Timeout for frame number: " << timeoutIndex << " at node: " << getIndex() << endl;
+
+        timeoutIndex %= maxWinSize;
         for (int i = 0; i<winSize; i++){
             sendFrame(localBuffer[(timeoutIndex + i) % maxWinSize].first,
                     localBuffer[(timeoutIndex + i) % maxWinSize].second);
+
+            // retransmission logs
+            EV << "Retransmitting message with payload: " <<
+                    Utils::decodeFrame(localBuffer[(timeoutIndex + i) % maxWinSize].first) << endl;
         }
     }
     else if (msg->par("session").longValue() != sessionId);
@@ -127,9 +135,18 @@ void GoBackN::handleMessage(cMessage *msg)
 
         if (seq == frameExp)
         {
-            std::string receivedMessage = Utils::decodeFrame(msg->getName());
-            EV << "Received Raw: " << std::string(msg->getName()).size() << ", " << msg->getName() << '\n';
-            EV << "Received Message: " << receivedMessage << '\n';
+            bool corrected = false;
+            std::string receivedMessage = Utils::decodeFrame(msg->getName(), corrected);
+            if (corrected)
+            {
+                EV << "Hamming code corrected error at message: " << receivedMessage << endl;
+            }
+//            EV << "Received Raw: " << std::string(msg->getName()).size() << ", " << msg->getName() << '\n';
+//            EV << "Received Message: " << receivedMessage << '\n';
+            EV << "Received message with payload: " << receivedMessage << endl;
+            EV << "sequence number: " << seq << endl;
+            EV << "Message type: piggybacked" << endl;
+            EV << "at node: " << getIndex() << endl;
 
             usefulData += receivedMessage.size() * 8;
             receivedBuffer.push(msg->getName());
@@ -139,8 +156,8 @@ void GoBackN::handleMessage(cMessage *msg)
         // Squeeze the window and cancel all timers in between
         int winSize = calcSize(seqFirst, ack);
         winSize = (winSize > calcSize(seqFirst, seqN)) ? 0 : winSize;
-        EV << "Local Buffer Size: " << calcSize(seqFirst, seqN) << '\n';
-        EV << "Ack Size: " << calcSize(seqFirst, ack) << '\n';
+//        EV << "Local Buffer Size: " << calcSize(seqFirst, seqN) << '\n';
+//        EV << "Ack Size: " << calcSize(seqFirst, ack) << '\n';
         if (winSize && isBusy() && !globalBuffer.empty())
         {
             loopAlert();
@@ -170,7 +187,7 @@ void GoBackN::handleMessage(cMessage *msg)
 void GoBackN::sendFrame(std::string frame, int seq, bool firstTime)
 {
     std::string decodedFrame = Utils::decodeFrame(frame);
-    EV << "Sending: " << decodedFrame << '\n';
+//    EV << "Sending: " << decodedFrame << '\n';
 
     cMessage* msg = new cMessage((char*)(frame.c_str()));
     if (firstTime)
@@ -185,7 +202,7 @@ void GoBackN::sendFrame(std::string frame, int seq, bool firstTime)
     }
     // Attaches Acknowledge (Piggybacking) & Frame Sequence to the message
     // Then Sends the new message and sets a timer for it
-    EV << "Sequence Number: " << seq << '\n';
+//    EV << "Sequence Number: " << seq << '\n';
 
     msg->addPar("seq");
     msg->par("seq").setLongValue(seq);
@@ -199,7 +216,7 @@ void GoBackN::sendFrame(std::string frame, int seq, bool firstTime)
     apply(msg, "outs", peer);
 
     // Total Data Stats
-    EV << "Frame Size: "<< frame.size() << ", " << sizeof(long) << '\n';
+//    EV << "Frame Size: "<< frame.size() << ", " << sizeof(long) << '\n';
     totalData += (frame.size() + 16) + par("numBits").intValue() * 2 + 8;
 
     // Create a timeout event
@@ -228,7 +245,7 @@ void GoBackN::printAndClear()
 {
     // Prints the received frames and clears everything
     std::string conversation = Utils::decodeFrames(receivedBuffer);
-    EV << "Received Messages: "<< conversation << '\n';
+//    EV << "Received Messages: "<< conversation << '\n';
 
     cancelAndDelete(lastMessage);
 
@@ -257,7 +274,11 @@ void GoBackN::printAndClear()
     msg->par("usefulData").setLongValue(usefulData);
     msg->addPar("totalData");
     msg->par("totalData").setLongValue(totalData);
-    EV << "Useful Received Data: " << usefulData << ", Total Sent Data: " << totalData << '\n';
+
+    msg->addPar("sessionID");
+    msg->par("sessionID").setLongValue(sessionId);
+
+//    EV << "Useful Received Data: " << usefulData << ", Total Sent Data: " << totalData << '\n';
     send(msg, "outs", gateSize("ins")-1);
 
     numGeneratedFrames = 0;

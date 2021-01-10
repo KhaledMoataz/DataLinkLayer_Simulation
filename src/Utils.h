@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <queue>
+#include <omnetpp.h>
 
 using namespace std;
 
@@ -28,7 +29,7 @@ public:
 
     static string decodeFrames(queue<string> receivedFrames);
 
-    static string decodeFrame(const string &frame);
+    static string decodeFrame(const string &frame, bool &corrected);
 };
 
 

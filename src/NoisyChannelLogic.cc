@@ -6,7 +6,7 @@ void GoBackN::apply(cMessage *msg, std::string gate, int port)
 {
     // Noisy channel logic
     std::string data = msg->getName();
-    EV << data.size() << " bits: " << data << endl;
+//    EV << data.size() << " bits: " << data << endl;
 
     double random = uniform(0, 1);
     double cp = 0;
@@ -38,7 +38,7 @@ void GoBackN::normalSend(cMessage* msg, std::string gate, int port)
 {
     send(msg, gate.c_str(), port);
 
-    EV << "Message is untouched" << endl;
+    EV << "Message untouched" << endl;
 
 }
 
@@ -76,7 +76,9 @@ void GoBackN::modify(cMessage* msg, std::string gate, int port)
 
     send(msg, gate.c_str(), port);
 
-    EV << "Message modified at " << index << " to " << frame << endl;
+    EV << "Message modified at index: " << index << endl;
+    EV << "Message before: " << before << endl;
+    EV << "Message after:  " << frame << endl;
 }
 
 

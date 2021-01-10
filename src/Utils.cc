@@ -78,11 +78,11 @@ string Utils::decodeFrames(queue<string> receivedFrames) {
     return message;
 }
 
-string Utils::decodeFrame(const string &receivedFrame) {
+string Utils::decodeFrame(const string &receivedFrame, bool &corrected) {
     string frame = receivedFrame;
 //    frame = Utils::toBinary(frame);
     frame = Framing::removeFlags(frame);
-    frame = Hamming::correctError(frame);
+    frame = Hamming::correctError(frame, corrected);
     frame = Framing::bitUnstuffing(frame);
     frame = Utils::toCharString(frame);
     return frame;
