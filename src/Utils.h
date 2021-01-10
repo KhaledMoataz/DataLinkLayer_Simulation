@@ -9,6 +9,7 @@
 #include <vector>
 #include <queue>
 #include <omnetpp.h>
+#include "GoBackN.h"
 
 using namespace std;
 
@@ -25,7 +26,7 @@ public:
 
     static void char_not(char &c);
 
-    static void getFramesToSend(const string &message, queue<string> &globalBuffer);
+    static void getFramesToSend(const string &message, queue<string> &globalBuffer, const GoBackN *node=nullptr);
 
     static string decodeFrames(queue<string> receivedFrames, bool &corrected);
 

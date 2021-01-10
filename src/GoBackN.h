@@ -29,6 +29,8 @@ using namespace omnetpp;
  */
 class GoBackN : public cSimpleModule
 {
+public:
+    void log(std::string message) const;
 private:
     int maxWinSize;
     int seqN;               // The end of the sliding window

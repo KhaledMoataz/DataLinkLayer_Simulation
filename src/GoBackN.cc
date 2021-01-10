@@ -62,7 +62,7 @@ void GoBackN::handleMessage(cMessage *msg)
 
 //        EV<<line<<'\n';
 
-        Utils::getFramesToSend(line,globalBuffer);
+        Utils::getFramesToSend(line, globalBuffer, this);
 
 
         if (globalBuffer.empty())
@@ -296,4 +296,8 @@ void GoBackN::loopAlert()
     double interFrameDelay = ((double) rand() / (RAND_MAX * 100.0));
     lastMessage = new cMessage("Continue");
     scheduleAt(simTime() + interFrameDelay, lastMessage);
+}
+
+void GoBackN::log(std::string message) const {
+    EV << message << endl;
 }

@@ -57,11 +57,18 @@ vector<string> Utils::splitString(string message) {
     return words;
 }
 
-void Utils::getFramesToSend(const string &message, queue<string> &globalBuffer) {
+void Utils::getFramesToSend(const string &message, queue<string> &globalBuffer, const GoBackN *node) {
     vector<string> words = splitString(message);
-    for (string word:words) {
-        word = Utils::toBinary(word);
+    if (node != nullptr)
+        node->log("BitStuffing");
+    for (int i=0;i<words.size();i++) {
+        string originalWord = words[i];
+        string word = Utils::toBinary(originalWord);
+        if (node != nullptr)
+            node->log("Frame#" + to_string(i) + " (" + originalWord + ") Before: " + word);
         word = Framing::bitStuffing(word);
+        if (node != nullptr)
+            node->log("After: " + word);
         word = Hamming::hamming(word);
         word = Framing::addFlags(word);
         globalBuffer.push(word);
