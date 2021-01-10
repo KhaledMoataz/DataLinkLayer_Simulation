@@ -78,10 +78,25 @@ void Parent::handleMessage(cMessage *msg)
     }
     else     // Node ended a connection
     {
-        available.push_back(atoi(msg->getName()));
+        int message = atoi(msg->getName());
+        int idx = message % 100;
+        message /= 100;
+        int numGeneratedFrames = message % 100;
+        message /= 100;
+        int numDroppedFrames = message % 100;
+        message /= 100;
+        int numRetransmittedFrames = message % 100;
+        message /= 100;
+        available.push_back(idx);
 
-        EV <<"The Parent received end session from Node "<<atoi(msg->getName())<<'\n'<<'\n';
+        int usefulData = msg->par("usefulData");
+        int totalData = msg->par("totalData");
 
+        EV << "The Parent received end session from Node " << idx << '\n';
+        EV << "Num Generated Frames: " << numGeneratedFrames << '\n';
+        EV << "Num Dropped Frames: " << numDroppedFrames << '\n';
+        EV << "Num Retransmitted Frames: " << numRetransmittedFrames << '\n';
+        EV << "Percentage of useful data: " << (100.0 * usefulData) / totalData << "%\n";
     }
     cancelAndDelete(msg);
 }

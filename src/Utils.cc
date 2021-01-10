@@ -63,6 +63,7 @@ void Utils::getFramesToSend(const string &message, queue<string> &globalBuffer) 
         word = Utils::toBinary(word);
         word = Framing::bitStuffing(word);
         word = Hamming::hamming(word);
+        word = Framing::addFlags(word);
         globalBuffer.push(word);
     }
 }

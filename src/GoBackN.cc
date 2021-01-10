@@ -29,15 +29,20 @@ void GoBackN::initialize()
     lastMessage = nullptr;
     localBuffer.resize(maxWinSize);
     file.open("../data/"+std::to_string(getIndex()), std::ifstream::in);
+    numGeneratedFrames = 0;
+    numDroppedFrames = 0;
+    numRetransmittedFrames = 0;
+    usefulData = 0;
+    totalData = 0;
 }
 
 void GoBackN::handleMessage(cMessage *msg)
 {
     if (msg->arrivedOn("ins",gateSize("ins")-1)) // New message from parent module to send a new line
     {
-        // TODO: Read from file logic
+        // Read from file logic
         // Set peer value
-        // transform to cmessages and push to main globalBuffer
+        // Transform to cmessages and push to main globalBuffer
 
         std::string str = msg->getName();
         peer = std::stoi(str.substr(0,str.find(" ")));
@@ -60,7 +65,7 @@ void GoBackN::handleMessage(cMessage *msg)
         Utils::getFramesToSend(line,globalBuffer);
 
 
-         if (globalBuffer.empty())
+        if (globalBuffer.empty())
         {
             cMessage *u = new cMessage("End");
             u->addPar("session");
@@ -80,7 +85,7 @@ void GoBackN::handleMessage(cMessage *msg)
     {
         std::string s = globalBuffer.front();
         globalBuffer.pop();
-        EV << "Sending: ";
+
         sendFrame(s, seqN, true);
         if (!globalBuffer.empty() && !isBusy())
         {
@@ -122,11 +127,11 @@ void GoBackN::handleMessage(cMessage *msg)
 
         if (seq == frameExp)
         {
-
-            std::string s = Utils::decodeFrame(msg->getName());
+            std::string receivedMessage = Utils::decodeFrame(msg->getName());
             EV << "Received Raw: " << std::string(msg->getName()).size() << ", " << msg->getName() << '\n';
-            EV << "Received Bits: " << Utils::toBinary(msg->getName()) << '\n';
-            EV << "Received Message: " << s << '\n';
+            EV << "Received Message: " << receivedMessage << '\n';
+
+            usefulData += receivedMessage.size() * 8;
             receivedBuffer.push(msg->getName());
             increment(frameExp);
         }
@@ -164,18 +169,24 @@ void GoBackN::handleMessage(cMessage *msg)
 
 void GoBackN::sendFrame(std::string frame, int seq, bool firstTime)
 {
-    std::string decodedFrame = Utils::decodeFrame(Framing::addFlags(frame));
-    EV << decodedFrame << '\n';
+    std::string decodedFrame = Utils::decodeFrame(frame);
+    EV << "Sending: " << decodedFrame << '\n';
 
     cMessage* msg = new cMessage((char*)(frame.c_str()));
-    EV << "Sending Raw: " << msg->getName() << '\n';
     if (firstTime)
     {
         localBuffer[index++ % maxWinSize] = {frame, seq};
         increment(seqN);
+        numGeneratedFrames++;
+    }
+    else
+    {
+        numRetransmittedFrames++;
     }
     // Attaches Acknowledge (Piggybacking) & Frame Sequence to the message
     // Then Sends the new message and sets a timer for it
+    EV << "Sequence Number: " << seq << '\n';
+
     msg->addPar("seq");
     msg->par("seq").setLongValue(seq);
 
@@ -184,9 +195,13 @@ void GoBackN::sendFrame(std::string frame, int seq, bool firstTime)
 
     msg->addPar("session");
     msg->par("session").setLongValue(sessionId);
-    EV << seq << '\n';
+
     apply(msg, "outs", peer);
-    EV << isBusy() << '\n';
+
+    // Total Data Stats
+    EV << "Frame Size: "<< frame.size() << ", " << sizeof(long) << '\n';
+    totalData += (frame.size() + 16) + par("numBits").intValue() * 2 + 8;
+
     // Create a timeout event
     cMessage* timer = new cMessage("");
     timers.push(timer);
@@ -213,7 +228,8 @@ void GoBackN::printAndClear()
 {
     // Prints the received frames and clears everything
     std::string conversation = Utils::decodeFrames(receivedBuffer);
-    EV << conversation << '\n';
+    EV << "Received Messages: "<< conversation << '\n';
+
     cancelAndDelete(lastMessage);
 
     seqN = 0;
@@ -222,6 +238,7 @@ void GoBackN::printAndClear()
     index = INT_MIN;
     sessionId = -1;
     lastMessage = nullptr;
+
     while(!timers.empty())
     {
         cMessage* timer = timers.front();
@@ -230,8 +247,24 @@ void GoBackN::printAndClear()
     }
 
     // send end session to the parent
-    std::string myIndex = std::to_string(getIndex());
-    send(new cMessage(((char*)(myIndex.c_str()))), "outs", gateSize("ins")-1);
+    int message = getIndex();
+    message += 100 * numGeneratedFrames;
+    message += 10000 * numDroppedFrames;
+    message += 1000000 * numRetransmittedFrames;
+    cMessage* msg = new cMessage(((char*)(std::to_string(message).c_str())));
+
+    msg->addPar("usefulData");
+    msg->par("usefulData").setLongValue(usefulData);
+    msg->addPar("totalData");
+    msg->par("totalData").setLongValue(totalData);
+    EV << "Useful Data: " << usefulData << ", Total Data: " << totalData << '\n';
+    send(msg, "outs", gateSize("ins")-1);
+
+    numGeneratedFrames = 0;
+    numDroppedFrames = 0;
+    numRetransmittedFrames = 0;
+    usefulData = 0;
+    totalData = 0;
 }
 
 void GoBackN::loopAlert()
