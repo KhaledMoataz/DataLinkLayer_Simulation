@@ -29,6 +29,11 @@ class Parent : public cSimpleModule
 public:
     std::vector<int> available;
     int sessionId;
+    int numGeneratedFrames;
+    int numDroppedFrames;
+    int numRetransmittedFrames;
+    int usefulData;
+    int totalData;
 
 protected:
     virtual void initialize();

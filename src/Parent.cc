@@ -25,6 +25,11 @@ void Parent::initialize()
 
     sessionId = 0;
 
+    numGeneratedFrames = 0;
+    numDroppedFrames = 0;
+    numRetransmittedFrames = 0;
+    usefulData = 0;
+    totalData = 0;
     scheduleAt(simTime() + 1.0, new cMessage("self"));
 }
 
@@ -74,6 +79,13 @@ void Parent::handleMessage(cMessage *msg)
         else
             EV <<"The Parent didn't choose any pairs"<<'\n'<<'\n';
 
+        if (simTime() >= 180 && simTime() < 200)
+        {
+            EV << "Num Generated Frames: " << numGeneratedFrames << '\n';
+            EV << "Num Dropped Frames: " << numDroppedFrames << '\n';
+            EV << "Num Retransmitted Frames: " << numRetransmittedFrames << '\n';
+            EV << "Percentage of useful data: " << (100.0 * usefulData) / totalData << "%\n";
+        }
         scheduleAt(simTime() + par("sleepTime"), new cMessage("self"));
     }
     else     // Node ended a connection
@@ -81,22 +93,24 @@ void Parent::handleMessage(cMessage *msg)
         int message = atoi(msg->getName());
         int idx = message % 100;
         message /= 100;
-        int numGeneratedFrames = message % 100;
+        int nGF = message % 100;
         message /= 100;
-        int numDroppedFrames = message % 100;
+        int nDF = message % 100;
         message /= 100;
-        int numRetransmittedFrames = message % 100;
+        int nRF = message % 100;
         message /= 100;
         available.push_back(idx);
 
-        int usefulData = msg->par("usefulData");
-        int totalData = msg->par("totalData");
+        int uD = msg->par("usefulData");
+        int tD = msg->par("totalData");
 
         EV << "The Parent received end session from Node " << idx << '\n';
-        EV << "Num Generated Frames: " << numGeneratedFrames << '\n';
-        EV << "Num Dropped Frames: " << numDroppedFrames << '\n';
-        EV << "Num Retransmitted Frames: " << numRetransmittedFrames << '\n';
-        EV << "Percentage of useful data: " << (100.0 * usefulData) / totalData << "%\n";
+
+        numGeneratedFrames += nGF;
+        numDroppedFrames += nDF;
+        numRetransmittedFrames += nRF;
+        usefulData += uD;
+        totalData += tD;
     }
     cancelAndDelete(msg);
 }

@@ -257,7 +257,7 @@ void GoBackN::printAndClear()
     msg->par("usefulData").setLongValue(usefulData);
     msg->addPar("totalData");
     msg->par("totalData").setLongValue(totalData);
-    EV << "Useful Data: " << usefulData << ", Total Data: " << totalData << '\n';
+    EV << "Useful Received Data: " << usefulData << ", Total Sent Data: " << totalData << '\n';
     send(msg, "outs", gateSize("ins")-1);
 
     numGeneratedFrames = 0;
