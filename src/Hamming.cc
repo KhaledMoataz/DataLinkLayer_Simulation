@@ -72,7 +72,7 @@ string Hamming::hamming(const string &binaryMessage) {
     return outputMessage;
 }
 
-string Hamming::correctError(const string &binaryMessage) {
+string Hamming::correctError(const string &binaryMessage, bool &corrected) {
     int errorPosition = 0;
     int totalMessageSize = binaryMessage.size();
     int nextPowerOfTwo = 1;
@@ -92,7 +92,10 @@ string Hamming::correctError(const string &binaryMessage) {
     }
     string correctMessage = binaryMessage;
     if (errorPosition != 0 && errorPosition - 1 < correctMessage.length())
+    {
         Utils::char_not(correctMessage[errorPosition - 1]);
+        corrected = true;
+    }
     return removeHammingBits(correctMessage);
 }
 

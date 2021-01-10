@@ -6,6 +6,7 @@
 #define UNTITLED1_HAMMING_H
 
 #include <string>
+#include <omnetpp.h>
 
 using namespace std;
 
@@ -21,7 +22,7 @@ private:
 public:
     static int redundantBitsCount(int messageSize);
     static string hamming(const string &binaryMessage);
-    static string correctError(const string &binaryMessage);
+    static string correctError(const string &binaryMessage, bool &corrected);
 
     };
 

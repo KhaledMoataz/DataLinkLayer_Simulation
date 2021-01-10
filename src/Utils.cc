@@ -63,25 +63,26 @@ void Utils::getFramesToSend(const string &message, queue<string> &globalBuffer) 
         word = Utils::toBinary(word);
         word = Framing::bitStuffing(word);
         word = Hamming::hamming(word);
+        word = Framing::addFlags(word);
         globalBuffer.push(word);
     }
 }
 
-string Utils::decodeFrames(queue<string> receivedFrames) {
+string Utils::decodeFrames(queue<string> receivedFrames, bool &corrected) {
     string message;
     while (!receivedFrames.empty()) {
-        string frame = decodeFrame(receivedFrames.front());
+        string frame = decodeFrame(receivedFrames.front(), corrected);
         receivedFrames.pop();
         message += frame + (!receivedFrames.empty() ? " " : "");
     }
     return message;
 }
 
-string Utils::decodeFrame(const string &receivedFrame) {
+string Utils::decodeFrame(const string &receivedFrame, bool &corrected) {
     string frame = receivedFrame;
 //    frame = Utils::toBinary(frame);
     frame = Framing::removeFlags(frame);
-    frame = Hamming::correctError(frame);
+    frame = Hamming::correctError(frame, corrected);
     frame = Framing::bitUnstuffing(frame);
     frame = Utils::toCharString(frame);
     return frame;

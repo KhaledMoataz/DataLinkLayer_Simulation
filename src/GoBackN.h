@@ -30,36 +30,42 @@ using namespace omnetpp;
 class GoBackN : public cSimpleModule
 {
 private:
-    int maxWinSize, seqN, seqFirst;
-    int frameExp;
-    int peer; // Which node I'm currently communicating with
-    int index; // For Indexing Local Buffer
-    int sessionId; // Id of the current communication session.
-    cMessage* lastMessage; // Last Continue Message
+    int maxWinSize;
+    int seqN;               // The end of the sliding window
+    int seqFirst;           // The beginning of the sliding window
+    int frameExp;           // Expected frame in the receiver side
+    int peer;               // Which node I'm currently communicating with
+    int index;              // For Indexing Local Buffer
+    int sessionId;          // Id of the current communication session.
+    cMessage* lastMessage;  // Last Continue Message for self alerting loop
 
-    std::ifstream file;
+    std::vector<std::pair<std::string, int>> localBuffer;   // Current sending window
+    std::queue<cMessage*> timers;                           // Timers Queue for sent frames
+    std::queue<std::string> globalBuffer;                   // All messages buffer
+    std::queue<std::string> receivedBuffer;                 // Received messaged buffer
 
-
-    std::vector<std::pair<std::string, int>> localBuffer;
-    std::queue<cMessage*> timers;
-    std::queue<std::string> globalBuffer, receivedBuffer;
-    std::vector<cMessage*> delayedMessages;
+    std::ifstream file;     // File reader for the current node
+    int numGeneratedFrames;
+    int numDroppedFrames;
+    int numRetransmittedFrames;
+    int usefulData;
+    int totalData;
 
     void increment(int & x);
     void sendFrame(std::string msg, int seq, bool firstTime=false);
-    bool isBusy();
+    bool isBusy();              // Checks if the window is full
     int calcSize(int x, int y);
-    void printAndClear();
-    void loopAlert();
+    void printAndClear();       // Prints the received frames and clears everything
+    void loopAlert();           // Self message for looping over the global buffer
 
     // Noisy Channel Functions
-    void apply(cMessage*, std::string, int);
-    void normalSend(cMessage*, std::string, int); // send the message unchanged
-    void lose(cMessage*, std::string, int); // ignore the message
-    void replicate(cMessage*, std::string, int);  // send the message twice
-    void delay(cMessage*, std::string, int);  // send the message after a random delay
-    void modify(cMessage*, std::string, int); // toggle a single random bit
-    void makeFrame(cMessage*);
+    void apply(cMessage*, std::string, int);        // Send a message and apply a random noise
+    void normalSend(cMessage*, std::string, int);   // send the message unchanged
+    void lose(cMessage*, std::string, int);         // ignore the message
+    void replicate(cMessage*, std::string, int);    // send the message twice
+    void delay(cMessage*, std::string, int);        // send the message after a random delay
+    void modify(cMessage*, std::string, int);       // toggle a single random bit
+
 protected:
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
